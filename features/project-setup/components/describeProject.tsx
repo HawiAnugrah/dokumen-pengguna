@@ -180,7 +180,10 @@ export default function DescribeProject() {
       if (success) {
         nextStep();
       } else {
-        setActionError('AI gagal menghasilkan rekomendasi. Silakan pastikan token aktif atau coba lagi.');
+        const storeErr = (useWizardStore.getState() as any).aiGenerationError;
+        setActionError(
+          storeErr || 'AI gagal menghasilkan rekomendasi. Silakan periksa koneksi internet Anda atau coba lagi.'
+        );
       }
     }, 600);
   };
@@ -418,10 +421,22 @@ export default function DescribeProject() {
 
       {(error || actionError) && (
         <div className="w-full text-left mb-4">
-          <p className="text-red-300 text-xs flex items-center gap-1.5 bg-red-950/40 border border-red-500/30 px-3.5 py-2.5 rounded-xl">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-            {error ? 'Deskripsi proyek wajib diisi sebelum melanjutkan.' : actionError}
-          </p>
+          <div className="text-red-300 text-xs flex items-center justify-between gap-2 bg-red-950/40 border border-red-500/30 px-3.5 py-2.5 rounded-xl">
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{error ? 'Deskripsi proyek wajib diisi sebelum melanjutkan.' : actionError}</span>
+            </div>
+            {actionError && (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={isBusy}
+                className="bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-400/30 px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                Coba Lagi
+              </button>
+            )}
+          </div>
         </div>
       )}
 

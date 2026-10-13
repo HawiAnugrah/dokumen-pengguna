@@ -416,6 +416,81 @@ function StoriesPageContent() {
     }
   };
 
+  const handleDownloadMarkdown = () => {
+    if (!cacheData?.project) {
+      alert("Data proyek belum siap.");
+      return;
+    }
+
+    const proj = cacheData.project;
+    let md = `# ${proj.name || 'Project'} — Product Requirements Document (PRD)\n\n`;
+    md += `> Dokumen Spesifikasi Kebutuhan Perangkat Lunak (Software Requirements Specification)\n\n`;
+    md += `## 1. Project Overview\n\n`;
+    md += `- **Nama Proyek**: ${proj.name || '-'}\n`;
+    md += `- **Tipe Aplikasi**: ${proj.application_type || '-'}\n`;
+    md += `- **Domain Bisnis**: ${proj.domain_business || '-'}\n`;
+    md += `- **Target Pengguna**: ${proj.target_users || '-'}\n`;
+    md += `- **Tujuan Bisnis**: ${proj.business_goals || '-'}\n`;
+    md += `- **Deskripsi**:\n  ${proj.description || '-'}\n\n`;
+
+    md += `## 2. Kebutuhan Fungsional (Epics & User Stories)\n\n`;
+    formattedEpics.forEach((epic) => {
+      md += `### ${epic.code}: ${epic.name}\n`;
+      if (epic.description) md += `*${epic.description}*\n\n`;
+
+      if (epic.user_stories.length === 0) {
+        md += `*Belum ada user story di modul ini.*\n\n`;
+      } else {
+        epic.user_stories.forEach((story) => {
+          md += `#### ${story.code}: Sebagai ${story.as_a}, saya ingin ${story.i_want}\n`;
+          md += `**Narasi**: Sebagai ${story.as_a}, saya ingin ${story.i_want}, agar ${story.so_that}.\n\n`;
+
+          if (story.acceptanceCriteria && story.acceptanceCriteria.length > 0) {
+            md += `**Acceptance Criteria (Kriteria Penerimaan)**:\n`;
+            story.acceptanceCriteria.forEach((ac) => {
+              md += `- ${ac}\n`;
+            });
+            md += `\n`;
+          }
+
+          if (story.techNotes && story.techNotes.length > 0) {
+            md += `**Catatan Teknis (Tech Notes)**:\n`;
+            story.techNotes.forEach((tn) => {
+              md += `- \`${tn}\`\n`;
+            });
+            md += `\n`;
+          }
+
+          if (story.testCases && story.testCases.length > 0) {
+            md += `**Skenario Pengujian (QA Test Cases)**:\n`;
+            story.testCases.forEach((tc) => {
+              md += `- **Aksi**: ${tc.action} → **Ekspektasi**: ${tc.expectedResult}\n`;
+            });
+            md += `\n`;
+          }
+        });
+      }
+    });
+
+    if (rawNfrs.length > 0) {
+      md += `## 3. Non-Functional Requirements (NFR)\n\n`;
+      rawNfrs.forEach((nfr, nIdx) => {
+        md += `### ${nIdx + 1}. [${nfr.category}]\n${nfr.description}\n\n`;
+      });
+    }
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = (proj.name || 'project').replace(/[^a-zA-Z0-9_\-]/g, '_');
+    a.download = `${safeName}-PRD.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDownload = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(formattedEpics, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -604,6 +679,14 @@ function StoriesPageContent() {
                       <FileText className="w-3.5 h-3.5 text-rose-600" />
                     )}
                     <span>Unduh PDF</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadMarkdown}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-blue-50 text-blue-700 bg-blue-50/50 rounded-lg transition-colors border border-blue-200 cursor-pointer text-xs font-semibold"
+                    title="Download Dokumen Spesifikasi sebagai Markdown (PRD.md)"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Unduh Markdown</span>
                   </button>
                   <button
                     onClick={handleDownload}

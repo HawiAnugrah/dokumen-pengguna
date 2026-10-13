@@ -8,6 +8,7 @@ import { LogOut, FastForward, Loader2, ArrowLeft } from 'lucide-react';
 import { projectApi } from '@/services/projectsApi';
 import { workspaceApi } from '@/services/workspaceApi';
 import { buildApi } from '@/services/buildApi';
+import { journeysApi } from '@/services/journeysApi';
 import { seedExampleStory } from '@/services/storiesApi';
 import { getAuthToken } from '@/lib/auth';
 
@@ -37,11 +38,15 @@ export default function WizardPage() {
   const {
     step,
     projectType,
+    projectName,
     projectId,
     userTypes,
+    userGoals,
     epics,
     userStories,
     nonFunctionals,
+    userJourney,
+    userJourneySteps,
     resetStore,
   } = useWizardStore() as any;
 
@@ -220,22 +225,38 @@ export default function WizardPage() {
     }
 
     try {
-            if (projectType === 'generate') {
+      if (projectType === 'generate') {
         const payload = {
-          user_types: (userTypes || []).map((ut: any) => ({
-            name: ut.name,
-            description: ut.description || '',
-            personas: (ut.personas || []).map((p: any) => ({
-              name: p.name || 'Persona',
-              age: p.age || 25,
-              location: p.location || '-',
-              family_status: p.familyStatus || '-',
-              job_title: p.jobTitle || '-',
-              about: p.about || '-',
-              goals: p.goals || '-',
-              frustrations: p.frustrations || '-',
-            })),
-          })),
+          user_types: (userTypes || []).map((ut: any) => {
+            const userGoal = (userGoals || []).find((g: any) => g.userTypeName === ut.name);
+            return {
+              name: ut.name,
+              description: ut.description || '',
+              personas: (ut.personas && ut.personas.length > 0)
+                ? ut.personas.map((p: any) => ({
+                    name: p.name || 'Persona',
+                    age: p.age || 25,
+                    location: p.location || '-',
+                    family_status: p.familyStatus || '-',
+                    job_title: p.jobTitle || '-',
+                    about: p.about || '-',
+                    goals: userGoal?.goals || p.goals || '-',
+                    frustrations: userGoal?.frustrations || p.frustrations || '-',
+                  }))
+                : [
+                    {
+                      name: `${ut.name} Persona`,
+                      age: 28,
+                      location: 'Jakarta',
+                      family_status: 'Single',
+                      job_title: ut.name,
+                      about: ut.description || '-',
+                      goals: userGoal?.goals || `• Mempermudah aktivitas sebagai ${ut.name}`,
+                      frustrations: userGoal?.frustrations || `• Kendala proses manual dan minim transparansi`,
+                    }
+                  ],
+            };
+          }),
           epics: (epics || []).map((e: any) => ({
             name: e.title,
             description: e.description || '',
@@ -256,6 +277,26 @@ export default function WizardPage() {
         };
 
         await projectApi.saveRequirements(projectId, payload, token);
+
+        if (userJourney && userJourney.trim()) {
+          try {
+            await journeysApi.createJourney(
+              {
+                name: `${projectName || 'Project'} — Main User Journey`,
+                description: userJourney,
+                project_id: projectId,
+                steps: (userJourneySteps || []).map((step: any, index: number) => ({
+                  step_order: index + 1,
+                  title: step.title,
+                  description: step.description,
+                })),
+              },
+              token
+            );
+          } catch (journeyErr) {
+            console.warn('Gagal menyimpan journey secara terpisah (non-fatal):', journeyErr);
+          }
+        }
 
         try {
           await buildApi.generateDefaults(projectId, token);
@@ -319,7 +360,7 @@ export default function WizardPage() {
       console.error('Gagal menyimpan project setup:', error);
       const errMsg = error?.message || '';
       if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('Load failed')) {
-        alert('Gagal terhubung ke server backend (Failed to fetch). Pastikan layanan backend di Render sudah aktif dan environment variable Vercel (NEXT_PUBLIC_API_URL) sudah terpasang dengan benar.');
+        alert('Gagal terhubung ke server backend. Jika testing di lokal, pastikan server FastAPI (port 8000) sudah aktif. Jika di production, pastikan layanan backend sudah aktif.');
       } else {
         alert(errMsg || 'Terjadi kesalahan saat menyimpan data.');
       }
@@ -394,12 +435,11 @@ export default function WizardPage() {
               {step === 4 && <NameProject />}
               {step === 5 && <DescribeProject />}
               {step === 6 && <UserTypes />}
-              {step === 7 && <AiChoice onManualSetup={handleManualSetup} />}
+              {step === 7 && <UserTypeGoals />}
               {step === 8 && <EpicsList />}
-              {step === 9 && <NonFunctionalList />}
-              {step === 10 && <UserStoriesList />}
-              {step === 11 && <UserTypeGoals />}
-              {step === 12 && <UserJourney onFinishProject={handleFinishWizard} />}
+              {step === 9 && <UserStoriesList />}
+              {step === 10 && <NonFunctionalList />}
+              {step === 11 && <UserJourney onFinishProject={handleFinishWizard} />}
             </>
           )}
 

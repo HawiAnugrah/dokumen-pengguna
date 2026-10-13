@@ -1,4 +1,5 @@
 // services/journeysApi.ts
+import { resilientFetch } from '@/lib/resilientFetch';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -68,9 +69,11 @@ const getAuthHeaders = (token: string) => ({
 export const journeysApi = {
   // Mengambil daftar user journey berdasarkan project_id
   getJourneysByProject: async (projectId: number, token: string): Promise<UserJourneyResponse[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/journeys?project_id=${projectId}`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/journeys?project_id=${projectId}`, {
       method: 'GET',
       headers: getAuthHeaders(token),
+      timeoutMs: 30000,
+      retries: 2,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -81,9 +84,11 @@ export const journeysApi = {
 
   // Mengambil detail user journey berdasarkan ID
   getJourneyById: async (journeyId: number, token: string): Promise<UserJourneyResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/journeys/${journeyId}`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/journeys/${journeyId}`, {
       method: 'GET',
       headers: getAuthHeaders(token),
+      timeoutMs: 30000,
+      retries: 2,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -94,10 +99,12 @@ export const journeysApi = {
 
   // Membuat/Menyimpan user journey baru beserta langkah-langkahnya
   createJourney: async (data: CreateJourneyPayload, token: string): Promise<UserJourneyResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/journeys`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/journeys`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

@@ -161,7 +161,7 @@ const getEpicIcon = (title: string) => {
 };
 
 export default function UserStoriesList() {
-  const { projectName, userStories, epics, userTypes, addUserStory, removeUserStory, updateStory, nextStep, prevStep } = useWizardStore() as any;
+  const { projectName, projectDescription, userStories, epics, userTypes, addUserStory, removeUserStory, updateStory, addEpic, nextStep, prevStep } = useWizardStore() as any;
   
   const [addingEpicTitle, setAddingEpicTitle] = useState<string | null>(null);
   const [storyName, setStoryName] = useState('');
@@ -190,10 +190,39 @@ export default function UserStoriesList() {
 
   const titleName = projectName?.trim() ? projectName : 'your project';
 
-  const groupedStories = epics.map((epic: any) => ({
+  // Group stories by epic, plus include any stories not matched to an existing epic
+  const existingEpicTitles = new Set((epics || []).map((e: any) => (e.title || '').toLowerCase()));
+  const unassignedStories = (userStories || []).filter(
+    (s: UserStoryItem) => !existingEpicTitles.has((s.epicTitle || '').toLowerCase())
+  );
+
+  const baseGrouped = (epics || []).map((epic: any) => ({
     ...epic,
-    stories: userStories.filter((s: UserStoryItem) => s.epicTitle.toLowerCase() === epic.title.toLowerCase())
+    stories: (userStories || []).filter((s: UserStoryItem) => (s.epicTitle || '').toLowerCase() === (epic.title || '').toLowerCase())
   }));
+
+  const groupedStories = unassignedStories.length > 0 && (epics || []).length > 0
+    ? [
+        ...baseGrouped,
+        {
+          id: 'unassigned-epic',
+          title: 'General Stories',
+          description: 'User stories yang belum dikelompokkan ke dalam modul epic tertentu',
+          stories: unassignedStories,
+        }
+      ]
+    : baseGrouped.length > 0
+    ? baseGrouped
+    : unassignedStories.length > 0
+    ? [
+        {
+          id: 'default-epic',
+          title: 'Modul Utama',
+          description: 'Modul fitur utama untuk user stories proyek ini',
+          stories: unassignedStories,
+        }
+      ]
+    : [];
 
   const toggleEpicCollapsed = (epicId: string) => {
     setCollapsedEpicIds((prev) => {
@@ -245,27 +274,31 @@ export default function UserStoriesList() {
     setEditingStoryId(null);
   };
 
-  // Fitur AI Generate yang terhubung langsung ke Backend API AI
+  // Fitur AI Generate yang terhubung langsung ke Backend API AI (spesifik terhadap user type & epic)
   const handleAiGenerateStoryForm = async (epicTitle: string) => {
     setIsAiSuggesting(true);
     try {
       const token = getAuthToken() || localStorage.getItem('token') || '';
-      const response = await projectApi.suggestDescription({
+      const targetUserType = selectedUserType || (userTypes[0]?.name || 'Pengguna');
+      const response = await projectApi.suggestStoryDraft({
         project_name: projectName || 'Proyek Baru',
-        platform_type: epicTitle,
+        epic_title: epicTitle,
+        user_type: targetUserType,
+        project_description: projectDescription || '',
       }, token);
 
-      if (response && response.description) {
-        setStoryName(`Fitur utama untuk mengelola ${epicTitle}`);
-        setDescription(response.description);
+      if (response && response.story_name) {
+        setStoryName(response.story_name);
+        setDescription(response.description || '');
       } else {
         setStoryName(`Kelola modul ${epicTitle}`);
-        setDescription(`Memungkinkan pengguna berinteraksi secara optimal dengan fitur ${epicTitle}.`);
+        setDescription(`Sebagai ${targetUserType}, saya ingin berinteraksi secara optimal dengan fitur ${epicTitle}.`);
       }
     } catch (err) {
-      console.error('AI Suggestion Error:', err);
-      setStoryName(`Implementasi ${epicTitle}`);
-      setDescription(`Sistem mendukung alur kerja efisien pada modul ${epicTitle}.`);
+      console.error('AI Story Draft Error:', err);
+      const targetUserType = selectedUserType || (userTypes[0]?.name || 'Pengguna');
+      setStoryName(`Fitur ${epicTitle} untuk ${targetUserType}`);
+      setDescription(`Sebagai ${targetUserType}, saya ingin mengelola kebutuhan pada modul ${epicTitle}.`);
     } finally {
       setIsAiSuggesting(false);
     }
@@ -302,7 +335,47 @@ export default function UserStoriesList() {
       </div>
 
       <div className="w-full flex flex-col gap-6 mb-6 text-left">
-        {groupedStories.map((epic: any, epicIndex: number) => {
+        {groupedStories.length === 0 ? (
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-8 backdrop-blur-md shadow-xl text-center flex flex-col items-center justify-center gap-4 animate-fadeIn">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+              <FolderKanban className="w-6 h-6 text-blue-300" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-base mb-1">Belum Ada Epic atau User Stories</h3>
+              <p className="text-blue-200 text-xs max-w-md">
+                User stories dikelompokkan berdasarkan modul Epic. Anda dapat kembali ke langkah sebelumnya atau mulai menambahkan modul dan story pertama langsung dari sini.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 mt-1">
+              <button
+                type="button"
+                onClick={prevStep}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium border border-white/20 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Epics
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const epicId = `epic-${Date.now()}`;
+                  const defaultTitle = 'Fitur Utama';
+                  if (typeof addEpic === 'function') {
+                    addEpic({
+                      id: epicId,
+                      title: defaultTitle,
+                      description: 'Modul fitur utama aplikasi',
+                    });
+                  }
+                  setAddingEpicTitle(defaultTitle);
+                }}
+                className="px-4 py-2 rounded-xl bg-white hover:bg-blue-50 text-blue-700 text-xs font-semibold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" /> Tambah Modul & Story
+              </button>
+            </div>
+          </div>
+        ) : (
+          groupedStories.map((epic: any, epicIndex: number) => {
           const isCollapsed = collapsedEpicIds.has(epic.id);
 
           return (
@@ -542,7 +615,8 @@ export default function UserStoriesList() {
               )}
             </div>
           );
-        })}
+        })
+      )}
       </div>
 
       {error && (

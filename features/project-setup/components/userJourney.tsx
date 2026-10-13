@@ -4,13 +4,13 @@
 import { useState, useEffect } from 'react';
 import LogoUserdoc from '../../../public/logoUserDoc';
 import { useWizardStore } from '../store/wizard-store';
-import { Sparkles, Loader2, AlertCircle, ArrowLeft, User } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, ArrowLeft, ArrowRight, User } from 'lucide-react';
 import { projectApi } from '@/services/projectsApi';
 import { journeysApi } from '@/services/journeysApi';
 import { getAuthToken } from '@/lib/auth';
 
 interface UserJourneyProps {
-  onFinishProject: () => Promise<void> | void;
+  onFinishProject?: () => Promise<void> | void;
 }
 
 interface JourneyStepDraft {
@@ -25,6 +25,7 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
     projectDescription,
     projectId,
     userTypes,
+    nextStep,
     prevStep,
     createProjectIfNeeded,
     userJourney,
@@ -41,9 +42,22 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
 
   const titleName = projectName?.trim() ? projectName : 'your project';
 
-  // 🚀 Auto-generate User Journey saat pertama kali membuka jika masih kosong
+  // 🚀 Sinkronkan dengan store jika sudah terisi dari step 5
   useEffect(() => {
-    if (!journeyText || journeyText.trim() === '') {
+    if (userJourney && (!journeyText || journeyText.trim() === '')) {
+      setJourneyText(userJourney);
+    }
+  }, [userJourney, journeyText]);
+
+  useEffect(() => {
+    if (userJourneySteps && userJourneySteps.length > 0 && journeySteps.length === 0) {
+      setJourneySteps(userJourneySteps);
+    }
+  }, [userJourneySteps, journeySteps]);
+
+  // Hanya auto-generate User Journey jika benar-benar belum pernah terisi
+  useEffect(() => {
+    if ((!userJourney || userJourney.trim() === '') && (!journeyText || journeyText.trim() === '')) {
       handleAiSuggest();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,6 +136,11 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
         return;
       }
 
+      if (onFinishProject) {
+        await onFinishProject();
+        return;
+      }
+
       try {
         await journeysApi.createJourney(
           {
@@ -139,8 +158,6 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
       } catch (journeyErr) {
         console.warn('Gagal menyimpan journey secara terpisah, lanjut menyimpan spesifikasi proyek:', journeyErr);
       }
-
-      await onFinishProject();
     } catch (err: any) {
       console.error('Gagal menyelesaikan project:', err);
       const errMsg = err?.message || '';
@@ -152,6 +169,18 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleNextStep = () => {
+    if (!journeyText || journeyText.trim() === '') {
+      setError(true);
+      return;
+    }
+    setError(false);
+    if (typeof setUserJourney === 'function') {
+      setUserJourney(journeyText, journeySteps);
+    }
+    nextStep();
   };
 
   if (isSubmitting) {
@@ -298,14 +327,32 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         
-        <button
-          type="button"
-          onClick={handleFinish}
-          disabled={isSuggesting}
-          className="bg-white hover:bg-blue-50 text-blue-700 px-6 py-2.5 rounded-xl font-medium transition-all flex items-center gap-2 shadow-lg text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          Finished, Create my Project
-        </button>
+        {onFinishProject ? (
+          <button
+            type="button"
+            onClick={handleFinish}
+            disabled={isSuggesting || isSubmitting}
+            className="bg-white hover:bg-blue-50 text-blue-700 px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-blue-700" />
+                <span>Building Your Project...</span>
+              </>
+            ) : (
+              <span>Finished, Create my Project</span>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleNextStep}
+            disabled={isSuggesting}
+            className="bg-white hover:bg-blue-50 text-blue-700 px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <span>Next</span> <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
     </div>

@@ -11,7 +11,11 @@ const getAuthToken = (): string =>
   (typeof window !== 'undefined' &&
     (localStorage.getItem('token') || localStorage.getItem('access_token'))) || '';
 
-export default function NonFunctionalList() {
+interface NonFunctionalListProps {
+  onFinishProject?: () => Promise<void> | void;
+}
+
+export default function NonFunctionalList({ onFinishProject }: NonFunctionalListProps = {}) {
   const {
     projectName,
     projectDescription,
@@ -25,6 +29,7 @@ export default function NonFunctionalList() {
   } = useWizardStore() as any;
 
   const [mounted, setMounted] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -316,8 +321,42 @@ export default function NonFunctionalList() {
         )}
 
         {nonFunctionals.length === 0 && !isAdding && (
-          <div className="col-span-full text-center py-10 text-blue-200 text-sm">
-            Belum ada non-functional requirement. Klik &quot;Add requirement&quot; untuk menambahkan secara manual.
+          <div className="col-span-full flex flex-col items-center justify-center py-12 px-4 text-center bg-white/5 border border-white/10 rounded-2xl">
+            <Sparkles className="w-8 h-8 text-yellow-300 mb-3 animate-pulse" />
+            <h3 className="text-white font-semibold text-base mb-1">Belum ada non-functional requirement</h3>
+            <p className="text-blue-200 text-xs max-w-md mb-5 leading-relaxed">
+              Tambahkan kebutuhan kualitas sistem seperti performa, keamanan, dan keandalan, atau buat 4 draf standar otomatis di bawah.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const stamp = Date.now();
+                  const defaults = [
+                    { id: `nfr-${stamp}-0`, category: 'Performance', description: `Waktu respons sistem untuk pemuatan data dan API utama ${titleName} rata-rata di bawah 1.5 detik pada koneksi internet standar.` },
+                    { id: `nfr-${stamp}-1`, category: 'Security', description: `Seluruh komunikasi data wajib menggunakan HTTPS (TLS 1.3), kata sandi di-hash dengan algoritma aman, dan otorisasi dibatasi sesuai peran user.` },
+                    { id: `nfr-${stamp}-2`, category: 'Reliability', description: `Tingkat ketersediaan layanan (uptime) sistem ditargetkan minimal 99.5% per bulan dengan pencadangan basis data otomatis berkala.` },
+                    { id: `nfr-${stamp}-3`, category: 'Usability', description: `Antarmuka pengguna dirancang responsif di semua perangkat (desktop & mobile) serta ramah bagi pengguna baru.` },
+                  ];
+                  defaults.forEach((d) => addNonFunctional(d));
+                }}
+                className="bg-white text-blue-700 text-xs px-4 py-2 rounded-xl font-semibold hover:bg-blue-50 transition-all flex items-center gap-1.5 shadow cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+                <span>+ Buat 4 Kebutuhan Standar Otomatis</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdding(true);
+                  setAiError('');
+                }}
+                className="bg-white/10 hover:bg-white/20 text-white text-xs px-4 py-2 rounded-xl font-medium border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Tambah Manual</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -345,13 +384,38 @@ export default function NonFunctionalList() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={nextStep}
-            className="bg-white hover:bg-blue-50 text-blue-700 px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg cursor-pointer text-sm"
-          >
-            <span>Next</span> <ArrowRight className="w-4 h-4" />
-          </button>
+          {onFinishProject ? (
+            <button
+              type="button"
+              onClick={async () => {
+                setIsFinishing(true);
+                try {
+                  await onFinishProject();
+                } finally {
+                  setIsFinishing(false);
+                }
+              }}
+              disabled={isFinishing}
+              className="bg-white hover:bg-blue-50 text-blue-700 px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg cursor-pointer text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isFinishing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-700" />
+                  <span>Building Your Project...</span>
+                </>
+              ) : (
+                <span>Finished, Create my Project</span>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="bg-white hover:bg-blue-50 text-blue-700 px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg cursor-pointer text-sm"
+            >
+              <span>Next</span> <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>

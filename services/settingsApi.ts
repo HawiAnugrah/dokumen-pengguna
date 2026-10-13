@@ -42,6 +42,7 @@ export interface ProviderInfo {
   provider_key: string;
   model: string;
   status: string;
+  key_count?: number;
   rpd_limit?: number;
   rpd_used?: number;
   rpd_remaining?: number;

@@ -932,8 +932,13 @@ function SettingsPageContent() {
                                     </div>
 
                                     {/* Model Badge */}
-                                    <div className="bg-gray-50 rounded-lg px-2.5 py-1 text-[11px] font-mono text-gray-600 truncate mb-4 border border-gray-100">
-                                      {p.model}
+                                    <div className="flex items-center justify-between gap-1.5 bg-gray-50 rounded-lg px-2.5 py-1 text-[11px] mb-4 border border-gray-100">
+                                      <span className="font-mono text-gray-600 truncate">{p.model}</span>
+                                      {(p as any).key_count > 1 && (
+                                        <span className="shrink-0 text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                          {(p as any).key_count} Keys Pool
+                                        </span>
+                                      )}
                                     </div>
 
                                     {/* Pelacakan RPD (Requests Per Day) */}
@@ -951,7 +956,7 @@ function SettingsPageContent() {
                                           {rpdUsed.toLocaleString()} <span className="text-[10px] font-normal text-gray-500">RPD</span>
                                         </span>
                                         <span className="text-[11px] text-gray-400 font-medium">
-                                          / {rpdLimit.toLocaleString()} RPD
+                                          / {rpdLimit.toLocaleString()} RPD {p.key_count && p.key_count > 1 ? `(${p.key_count} keys)` : ''}
                                         </span>
                                       </div>
                                       <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
