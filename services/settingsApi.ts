@@ -42,6 +42,10 @@ export interface ProviderInfo {
   provider_key: string;
   model: string;
   status: string;
+  rpd_limit?: number;
+  rpd_used?: number;
+  rpd_remaining?: number;
+  rpd_percentage?: number;
   daily_limit: number;
   daily_used: number;
   daily_remaining: number;
@@ -66,6 +70,11 @@ export interface TokenUsageHistoryItem {
 }
 
 export interface TokenUsageData {
+  rpd_total_limit?: number;
+  rpd_total_used?: number;
+  rpd_total_remaining?: number;
+  rpd_total_percentage?: number;
+  monthly_requests_total?: number;
   monthly_quota: number;
   monthly_used: number;
   daily_used?: number;

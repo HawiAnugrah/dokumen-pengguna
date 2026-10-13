@@ -18,6 +18,29 @@ export default function UserTypeGoals() {
     return () => clearTimeout(t);
   }, []);
 
+  // 🚀 Auto-populate Goals & Frustrations jika masih kosong
+  useEffect(() => {
+    if (!userTypes || userTypes.length === 0) return;
+
+    userTypes.forEach((ut: any) => {
+      const existing = (userGoals || []).find((g: any) => g.userTypeName === ut.name);
+      const persona = ut.personas && ut.personas[0];
+
+      const hasGoals = existing && existing.goals && existing.goals.trim().length >= 10;
+      const hasFrustrations = existing && existing.frustrations && existing.frustrations.trim().length >= 10;
+
+      if (!hasGoals || !hasFrustrations) {
+        const defaultGoals = hasGoals
+          ? existing.goals
+          : (persona?.goals?.trim() || `Mempermudah pengelolaan tugas, mempercepat akses data penting, dan memaksimalkan efisiensi peran ${ut.name}.`);
+        const defaultFrustrations = hasFrustrations
+          ? existing.frustrations
+          : (persona?.frustrations?.trim() || `Proses sistem yang lambat, UI yang membingungkan, dan minimnya transparansi status pada aplikasi.`);
+        updateUserGoal(ut.name, defaultGoals, defaultFrustrations);
+      }
+    });
+  }, [userTypes, userGoals, updateUserGoal]);
+
   const [isAdding, setIsAdding] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeDesc, setNewTypeDesc] = useState('');

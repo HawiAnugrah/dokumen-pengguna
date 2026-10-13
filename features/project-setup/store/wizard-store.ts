@@ -53,6 +53,12 @@ export interface UserStoryItem {
   testCases?: string[];
 }
 
+export interface JourneyStepItem {
+  title: string;
+  description: string;
+  persona_name?: string | null;
+}
+
 export type ProjectTypeEnum = 'generate' | 'translate' | 'example' | null;
 
 interface WizardState {
@@ -68,6 +74,8 @@ interface WizardState {
   epics: EpicItem[];
   nonFunctionals: NonFunctionalItem[];
   userStories: UserStoryItem[];
+  userJourney: string;
+  userJourneySteps: JourneyStepItem[];
   projectId: number | null;
   isCreatingProject: boolean;
   workspaceId: number | null;
@@ -99,6 +107,7 @@ interface WizardState {
   setProjectType: (type: ProjectTypeEnum) => void;
   setProjectDescription: (desc: string) => void;
   setPlatformType: (platform: string) => void;
+  setUserJourney: (journey: string, steps?: JourneyStepItem[]) => void;
 
   setSoftwareName: (name: string) => void;
   setSoftwareOverview: (overview: string) => void;
@@ -205,6 +214,8 @@ export const useWizardStore = create<WizardState>()(
       epics: [],
       nonFunctionals: [],
       userStories: [],
+      userJourney: '',
+      userJourneySteps: [],
       projectId: null,
       isCreatingProject: false,
       workspaceId: null,
@@ -234,6 +245,7 @@ export const useWizardStore = create<WizardState>()(
       setProjectType: (type) => set({ projectType: type }),
       setProjectDescription: (desc) => set({ projectDescription: desc }),
       setPlatformType: (platform) => set({ platformType: platform }),
+      setUserJourney: (journey, steps = []) => set({ userJourney: journey, userJourneySteps: steps }),
 
       setSoftwareName: (name) => set({ softwareName: name }),
       setSoftwareOverview: (overview) => set({ softwareOverview: overview }),
@@ -415,10 +427,21 @@ export const useWizardStore = create<WizardState>()(
             })
           );
 
+          const mappedUserGoals: UserGoalItem[] = mappedUserTypes.map((ut: any, index: number) => {
+            const persona = ut.personas && ut.personas[0];
+            return {
+              id: `ug-${stamp}-${index}`,
+              userTypeName: ut.name,
+              goals: persona?.goals?.trim() || `Mempermudah pengelolaan dan pencapaian target kerja sebagai ${ut.name}.`,
+              frustrations: persona?.frustrations?.trim() || `Sistem yang rumit, lambat, atau kurang transparan dalam memberikan informasi yang dibutuhkan.`,
+            };
+          });
+
           set({
             epics: mappedEpics,
             userStories: mappedStories,
             userTypes: mappedUserTypes,
+            userGoals: mappedUserGoals,
             nonFunctionals: mappedNonFunctionals
           });
           return true;
@@ -438,6 +461,8 @@ export const useWizardStore = create<WizardState>()(
         epics: [],
         nonFunctionals: [],
         userStories: [],
+        userJourney: '',
+        userJourneySteps: [],
         projectId: null,
         workspaceId: null,
         softwareName: '',

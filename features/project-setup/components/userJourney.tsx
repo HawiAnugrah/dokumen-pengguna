@@ -1,7 +1,7 @@
 // features/project-setup/components/UserJourney.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LogoUserdoc from '../../../public/logoUserDoc';
 import { useWizardStore } from '../store/wizard-store';
 import { Sparkles, Loader2, AlertCircle, ArrowLeft, User } from 'lucide-react';
@@ -20,16 +20,34 @@ interface JourneyStepDraft {
 }
 
 export default function UserJourney({ onFinishProject }: UserJourneyProps) {
-  const { projectName, projectDescription, projectId, userTypes, prevStep, createProjectIfNeeded } = useWizardStore() as any;
+  const {
+    projectName,
+    projectDescription,
+    projectId,
+    userTypes,
+    prevStep,
+    createProjectIfNeeded,
+    userJourney,
+    userJourneySteps,
+    setUserJourney,
+  } = useWizardStore() as any;
   
-  const [journeyText, setJourneyText] = useState('');
-  const [journeySteps, setJourneySteps] = useState<JourneyStepDraft[]>([]);
+  const [journeyText, setJourneyText] = useState(userJourney || '');
+  const [journeySteps, setJourneySteps] = useState<JourneyStepDraft[]>(userJourneySteps || []);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
   const [actionError, setActionError] = useState('');
 
   const titleName = projectName?.trim() ? projectName : 'your project';
+
+  // 🚀 Auto-generate User Journey saat pertama kali membuka jika masih kosong
+  useEffect(() => {
+    if (!journeyText || journeyText.trim() === '') {
+      handleAiSuggest();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAiSuggest = async () => {
     setActionError('');
@@ -58,13 +76,15 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
         token
       );
       setJourneyText(result.journey);
-      setJourneySteps(
-        (result.steps || []).map((s: any) => ({
-          title: s.title,
-          description: s.description,
-          persona_name: s.persona_name ?? null,
-        }))
-      );
+      const steps = (result.steps || []).map((s: any) => ({
+        title: s.title,
+        description: s.description,
+        persona_name: s.persona_name ?? null,
+      }));
+      setJourneySteps(steps);
+      if (typeof setUserJourney === 'function') {
+        setUserJourney(result.journey, steps);
+      }
       if (error) setError(false);
     } catch (err: any) {
       console.error('Gagal mendapatkan saran AI:', err);
@@ -82,7 +102,7 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
     setError(false);
     setActionError('');
 
-        const token = getAuthToken();
+    const token = getAuthToken();
     if (!token) {
       setActionError('Sesi habis, silakan login kembali.');
       return;
@@ -123,11 +143,16 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
       await onFinishProject();
     } catch (err: any) {
       console.error('Gagal menyelesaikan project:', err);
-      setActionError(err.message || 'Gagal menyimpan proyek ke server.');
+      const errMsg = err?.message || '';
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('Load failed')) {
+        setActionError('Gagal terhubung ke backend server (Failed to fetch). Pastikan backend Render sudah aktif dan environment variable Vercel (NEXT_PUBLIC_API_URL) telah terpasang.');
+      } else {
+        setActionError(errMsg || 'Gagal menyimpan proyek ke server.');
+      }
     } finally {
       setIsSubmitting(false);
     }
-    };
+  };
 
   if (isSubmitting) {
     return (
@@ -194,6 +219,9 @@ export default function UserJourney({ onFinishProject }: UserJourneyProps) {
           value={journeyText}
           onChange={(e) => {
             setJourneyText(e.target.value);
+            if (typeof setUserJourney === 'function') {
+              setUserJourney(e.target.value, journeySteps);
+            }
             if (error) setError(false);
           }}
           disabled={isSuggesting}

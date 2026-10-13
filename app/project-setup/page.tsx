@@ -317,7 +317,12 @@ export default function WizardPage() {
 
     } catch (error: any) {
       console.error('Gagal menyimpan project setup:', error);
-      alert(error.message || 'Terjadi kesalahan saat menyimpan data.');
+      const errMsg = error?.message || '';
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('Load failed')) {
+        alert('Gagal terhubung ke server backend (Failed to fetch). Pastikan layanan backend di Render sudah aktif dan environment variable Vercel (NEXT_PUBLIC_API_URL) sudah terpasang dengan benar.');
+      } else {
+        alert(errMsg || 'Terjadi kesalahan saat menyimpan data.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -325,11 +330,6 @@ export default function WizardPage() {
 
   return (
     <main className="min-h-screen bg-blue-600 flex items-center justify-center p-6 relative">
-      {isSubmitting && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center text-white font-medium">
-          Menyimpan spesifikasi proyek ke server...
-        </div>
-      )}
 
       {isSeedingExample && (
         <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center text-white font-medium">

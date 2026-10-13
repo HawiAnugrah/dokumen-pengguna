@@ -69,7 +69,7 @@ const PRESET_AI_RULES: AIRuleSuggestion[] = [
 const TAB_LABELS: Record<'general' | 'ai-rules' | 'token-usage', string> = {
   general: 'General',
   'ai-rules': 'AI Rules',
-  'token-usage': 'Token & AI Usage',
+  'token-usage': 'Pelacak RPD',
 };
 
 function SettingsPageContent() {
@@ -446,7 +446,7 @@ function SettingsPageContent() {
                       : 'text-gray-400 border-transparent hover:text-gray-600'
                   }`}
                 >
-                  <Coins className="w-3.5 h-3.5" /> Token & AI Usage
+                  <Zap className="w-3.5 h-3.5" /> Pelacak RPD
                 </button>
               </div>
 
@@ -810,39 +810,45 @@ function SettingsPageContent() {
                   </div>
                 )}
 
-                {/* ============ TAB: TOKEN & AI USAGE ============ */}
+                {/* ============ TAB: PELACAK RPD (REQUESTS PER DAY) ============ */}
                 {activeTab === 'token-usage' && (
                   <div className="space-y-6">
                     {isLoadingTokens ? (
                       <div className="flex items-center justify-center py-16">
                         <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                        <span className="ml-2 text-sm text-gray-500">Memuat statistik token...</span>
+                        <span className="ml-2 text-sm text-gray-500">Memuat statistik RPD...</span>
                       </div>
                     ) : (
                       <>
-                        {/* 1. Global Overview Metrics */}
+                        {/* 1. Global Overview Metrics RPD */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100">
                             <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                              <Calendar className="w-3.5 h-3.5 text-blue-600" /> Token Terpakai Hari Ini
+                              <Zap className="w-3.5 h-3.5 text-amber-500" /> RPD Terpakai Hari Ini
                             </span>
-                            <div className="mt-1.5 text-xl font-bold text-gray-900">
-                              {tokenData?.daily_used != null ? tokenData.daily_used.toLocaleString() : '0'}
+                            <div className="mt-1.5 flex items-baseline gap-1.5">
+                              <span className="text-xl font-bold text-gray-900">
+                                {tokenData?.rpd_total_used != null ? tokenData.rpd_total_used.toLocaleString() : '0'}
+                              </span>
+                              <span className="text-xs text-gray-400 font-medium">
+                                / {(tokenData?.rpd_total_limit ?? 2700).toLocaleString()} RPD
+                              </span>
                             </div>
                             <span className="text-[10px] text-gray-400 mt-1 block">
-                              Total seluruh provider hari ini (UTC)
+                              Total permintaan AI seluruh provider hari ini (UTC)
                             </span>
                           </div>
 
                           <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100">
                             <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                              <TrendingUp className="w-3.5 h-3.5 text-blue-600" /> Token Terpakai Bulan Ini
+                              <TrendingUp className="w-3.5 h-3.5 text-blue-600" /> Total Request Bulan Ini
                             </span>
                             <div className="mt-1.5 text-xl font-bold text-blue-600">
-                              {tokenData ? tokenData.monthly_used.toLocaleString() : '0'}
+                              {tokenData?.monthly_requests_total != null ? tokenData.monthly_requests_total.toLocaleString() : '0'}
+                              <span className="text-xs text-gray-400 font-normal ml-1">panggilan</span>
                             </div>
                             <span className="text-[10px] text-gray-400 mt-1 block">
-                              Dihitung otomatis per pemanggilan AI
+                              {tokenData ? tokenData.monthly_used.toLocaleString() : '0'} total token terakumulasi
                             </span>
                           </div>
 
@@ -856,20 +862,20 @@ function SettingsPageContent() {
                               </span>
                             </div>
                             <span className="text-[10px] text-gray-400 mt-2 block">
-                              Round-Robin & Failover Siap
+                              Round-Robin & Automatic Failover Siap
                             </span>
                           </div>
                         </div>
 
-                        {/* 2. Pelacakan Token Terpisah Per Masing-Masing Provider AI */}
+                        {/* 2. Pelacakan RPD Terpisah Per Masing-Masing Provider AI */}
                         <div className="border-t border-gray-100 pt-5">
                           <div className="flex items-center justify-between mb-3.5">
                             <div>
                               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                                <Zap className="w-4 h-4 text-amber-500" /> Pelacakan Kuota & Limit Per Provider AI
+                                <Zap className="w-4 h-4 text-amber-500" /> Pelacakan RPD (Requests Per Day) Per Provider AI
                               </h3>
                               <p className="text-xs text-gray-500 mt-0.5">
-                                Penggunaan token dan sisa kuota harian/bulanan yang dialokasikan masing-masing AI
+                                Batas dan penggunaan Request Per Day (RPD) yang dialokasikan oleh masing-masing penyedia AI
                               </p>
                             </div>
                           </div>
@@ -883,10 +889,16 @@ function SettingsPageContent() {
                               const ProviderIcon = isGemini ? Sparkles : isOpenRouter ? Bot : Cpu;
                               const iconColor = isGemini ? 'text-blue-600' : isOpenRouter ? 'text-violet-600' : 'text-emerald-600';
                               const iconBg = isGemini ? 'bg-blue-50 border-blue-200' : isOpenRouter ? 'bg-violet-50 border-violet-200' : 'bg-emerald-50 border-emerald-200';
+                              
+                              const rpdUsed = p.rpd_used ?? p.requests_today ?? 0;
+                              const rpdLimit = p.rpd_limit ?? (isGemini ? 1500 : isOpenRouter ? 200 : 1000);
+                              const rpdPct = p.rpd_percentage ?? (rpdLimit > 0 ? Math.min(100, Math.round((rpdUsed / rpdLimit) * 100)) : 0);
+                              const rpdRem = p.rpd_remaining ?? Math.max(0, rpdLimit - rpdUsed);
+
                               const progressColor =
-                                p.daily_percentage > 90
+                                rpdPct > 90
                                   ? 'bg-red-500'
-                                  : p.daily_percentage > 70
+                                  : rpdPct > 70
                                   ? 'bg-amber-500'
                                   : isGemini
                                   ? 'bg-blue-600'
@@ -924,52 +936,52 @@ function SettingsPageContent() {
                                       {p.model}
                                     </div>
 
-                                    {/* Pelacakan Token Per Hari */}
+                                    {/* Pelacakan RPD (Requests Per Day) */}
                                     <div className="space-y-1.5 p-3 rounded-xl bg-gray-50/60 border border-gray-100 mb-3">
                                       <div className="flex items-center justify-between text-xs">
                                         <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1">
-                                          <Calendar className="w-3 h-3 text-gray-400" /> Limit Harian
+                                          <Zap className="w-3 h-3 text-amber-500" /> Limit RPD Harian
                                         </span>
                                         <span className="text-[11px] font-bold text-gray-800">
-                                          {p.daily_percentage}%
+                                          {rpdPct}%
                                         </span>
                                       </div>
                                       <div className="flex items-baseline justify-between text-xs">
                                         <span className="font-bold text-gray-900 text-sm">
-                                          {p.daily_used.toLocaleString()}
+                                          {rpdUsed.toLocaleString()} <span className="text-[10px] font-normal text-gray-500">RPD</span>
                                         </span>
                                         <span className="text-[11px] text-gray-400 font-medium">
-                                          / {p.daily_limit.toLocaleString()}
+                                          / {rpdLimit.toLocaleString()} RPD
                                         </span>
                                       </div>
                                       <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                                         <div
                                           className={`h-1.5 rounded-full transition-all duration-500 ${progressColor}`}
-                                          style={{ width: `${p.daily_percentage}%` }}
+                                          style={{ width: `${rpdPct}%` }}
                                         />
                                       </div>
                                       <div className="flex items-center justify-between text-[10px] text-gray-400 pt-0.5">
-                                        <span>{p.daily_remaining.toLocaleString()} sisa token</span>
-                                        <span>{p.requests_today} request hari ini</span>
+                                        <span>{rpdRem.toLocaleString()} sisa request hari ini</span>
+                                        <span>{p.daily_used.toLocaleString()} token terpakai</span>
                                       </div>
                                     </div>
 
-                                    {/* Pelacakan Token Per Bulan */}
+                                    {/* Akumulasi Request & Token Per Bulan */}
                                     <div className="space-y-1.5 p-3 rounded-xl bg-gray-50/60 border border-gray-100">
                                       <div className="flex items-center justify-between text-xs">
                                         <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1">
-                                          <TrendingUp className="w-3 h-3 text-gray-400" /> Total Bulan Ini
+                                          <TrendingUp className="w-3 h-3 text-gray-400" /> Akumulasi Bulan Ini
                                         </span>
                                         <span className="text-[11px] font-bold text-gray-800">
-                                          {p.monthly_percentage}%
+                                          {p.requests_month} request
                                         </span>
                                       </div>
                                       <div className="flex items-baseline justify-between text-xs">
                                         <span className="font-bold text-gray-900">
-                                          {p.monthly_used.toLocaleString()}
+                                          {p.monthly_used.toLocaleString()} <span className="text-[10px] font-normal text-gray-500">token</span>
                                         </span>
                                         <span className="text-[11px] text-gray-400 font-medium">
-                                          / {p.monthly_limit.toLocaleString()}
+                                          / {p.monthly_limit.toLocaleString()} token
                                         </span>
                                       </div>
                                       <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
@@ -979,8 +991,8 @@ function SettingsPageContent() {
                                         />
                                       </div>
                                       <div className="flex items-center justify-between text-[10px] text-gray-400 pt-0.5">
-                                        <span>{p.monthly_remaining.toLocaleString()} sisa kuota</span>
-                                        <span>{p.requests_month} request bulan ini</span>
+                                        <span>{p.monthly_remaining.toLocaleString()} sisa kuota token</span>
+                                        <span>{p.monthly_percentage}%</span>
                                       </div>
                                     </div>
                                   </div>
@@ -995,10 +1007,10 @@ function SettingsPageContent() {
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
                             <div>
                               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                                <History className="w-4 h-4 text-blue-600" /> Riwayat Pemanggilan AI Terakhir
+                                <History className="w-4 h-4 text-blue-600" /> Riwayat Request AI Terakhir
                               </h3>
                               <p className="text-xs text-gray-500 mt-0.5">
-                                Log audit pemakaian prompt dan completion token
+                                Log audit pemanggilan API, model, serta prompt dan completion token
                               </p>
                             </div>
 
