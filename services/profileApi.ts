@@ -41,8 +41,27 @@ export const profileApi = {
     return response.json();
   },
 
+  requestPasswordOtp: async (
+    current_password: string,
+    token: string
+  ): Promise<{ message: string }> => {
+    const response = await fetch(`${API_BASE_URL}/api/profile/request-password-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ current_password }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(formatApiError(result, 'Gagal mengirim kode OTP'));
+    }
+    return result;
+  },
+
   changePassword: async (
-    data: { current_password: string; new_password: string },
+    data: { current_password: string; new_password: string; otp_code: string },
     token: string
   ): Promise<{ message: string }> => {
     const response = await fetch(`${API_BASE_URL}/api/profile/change-password`, {
@@ -59,4 +78,4 @@ export const profileApi = {
     }
     return result;
   },
-};
+};

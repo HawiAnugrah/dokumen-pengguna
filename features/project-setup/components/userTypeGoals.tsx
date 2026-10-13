@@ -32,10 +32,10 @@ export default function UserTypeGoals() {
       if (!hasGoals || !hasFrustrations) {
         const defaultGoals = hasGoals
           ? existing.goals
-          : (persona?.goals?.trim() || `Mempermudah pengelolaan tugas, mempercepat akses data penting, dan memaksimalkan efisiensi peran ${ut.name}.`);
+          : (persona?.goals?.trim() || `• Mempermudah pengelolaan tugas sebagai ${ut.name}\n• Mempercepat akses informasi dan alur kerja utama\n• Memaksimalkan efisiensi peran di aplikasi`);
         const defaultFrustrations = hasFrustrations
           ? existing.frustrations
-          : (persona?.frustrations?.trim() || `Proses sistem yang lambat, UI yang membingungkan, dan minimnya transparansi status pada aplikasi.`);
+          : (persona?.frustrations?.trim() || `• Proses sistem yang lambat saat memproses data\n• Tampilan antarmuka yang membingungkan bagi pengguna\n• Minimnya transparansi feedback atau notifikasi`);
         updateUserGoal(ut.name, defaultGoals, defaultFrustrations);
       }
     });
@@ -65,6 +65,19 @@ export default function UserTypeGoals() {
 
     updateUserGoal(userTypeName, updatedGoals, updatedFrustrations);
     if (error) setError(false);
+  };
+
+  const handleAddBulletPoint = (userTypeName: string, field: 'goals' | 'frustrations') => {
+    const current = userGoals.find((g: any) => g.userTypeName === userTypeName) || { goals: '', frustrations: '' };
+    const currentVal = (field === 'goals' ? current.goals : current.frustrations) || '';
+    const trimmed = currentVal.trim();
+    let newVal = '';
+    if (!trimmed) {
+      newVal = '• ';
+    } else {
+      newVal = `${trimmed}\n• `;
+    }
+    handleInputChange(userTypeName, field, newVal);
   };
 
   const handleAddUserTypeInline = (e: React.FormEvent) => {
@@ -305,19 +318,30 @@ export default function UserTypeGoals() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-semibold text-blue-300 uppercase tracking-wider">
-                      Goals (Min 10 chars)
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-semibold text-blue-300 uppercase tracking-wider">
+                        Goals (Tujuan Pengguna)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleAddBulletPoint(ut.name, 'goals')}
+                        className="text-[10px] text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg border border-white/15 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                        title="Tambah butir tujuan baru"
+                      >
+                        <Plus className="w-3 h-3 text-emerald-400" />
+                        <span>Tambah Poin</span>
+                      </button>
+                    </div>
                     <span className={`text-[10px] ${goalData.goals.length < 10 ? 'text-amber-300' : 'text-blue-300/70'}`}>
                       {goalData.goals.length}/800
                     </span>
                   </div>
                   <textarea
-                    placeholder={`What are the goals of a ${ut.name}?`}
+                    placeholder={`• Tujuan 1\n• Tujuan 2`}
                     value={goalData.goals}
                     onChange={(e) => handleInputChange(ut.name, 'goals', e.target.value)}
                     maxLength={800}
-                    rows={3}
+                    rows={4}
                     disabled={isThisLoading}
                     className="w-full bg-white/10 border border-blue-300/40 rounded-2xl px-4 py-3 text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-blue-300/40 resize-y transition-colors disabled:opacity-60 shadow-inner"
                   />
@@ -325,19 +349,30 @@ export default function UserTypeGoals() {
 
                 <div className="flex flex-col">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-semibold text-blue-300 uppercase tracking-wider">
-                      Frustrations (Min 10 chars)
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-semibold text-blue-300 uppercase tracking-wider">
+                        Frustrations (Kendala / Masalah)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleAddBulletPoint(ut.name, 'frustrations')}
+                        className="text-[10px] text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg border border-white/15 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                        title="Tambah butir kendala baru"
+                      >
+                        <Plus className="w-3 h-3 text-rose-400" />
+                        <span>Tambah Poin</span>
+                      </button>
+                    </div>
                     <span className={`text-[10px] ${goalData.frustrations.length < 10 ? 'text-amber-300' : 'text-blue-300/70'}`}>
                       {goalData.frustrations.length}/800
                     </span>
                   </div>
                   <textarea
-                    placeholder={`What are the frustrations of a ${ut.name}?`}
+                    placeholder={`• Kendala 1\n• Kendala 2`}
                     value={goalData.frustrations}
                     onChange={(e) => handleInputChange(ut.name, 'frustrations', e.target.value)}
                     maxLength={800}
-                    rows={3}
+                    rows={4}
                     disabled={isThisLoading}
                     className="w-full bg-white/10 border border-blue-300/40 rounded-2xl px-4 py-3 text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-blue-300/40 resize-y transition-colors disabled:opacity-60 shadow-inner"
                   />

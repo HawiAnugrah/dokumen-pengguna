@@ -1,3 +1,5 @@
+import { resilientFetch } from '@/lib/resilientFetch';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 function formatApiError(errorData: any, fallback: string): string {
@@ -91,7 +93,28 @@ export interface GenerateRequirementsResponse {
   epics?: any[];
   user_stories?: any[];
   nfrs?: any[];
+  user_journey?: {
+    narrative?: string;
+    steps?: Array<{
+      title: string;
+      description: string;
+      persona_name: string;
+    }>;
+  };
 }
+
+export interface SuggestStoryDraftPayload {
+  project_name: string;
+  epic_title: string;
+  user_type: string;
+  project_description?: string;
+}
+
+export interface SuggestStoryDraftResponse {
+  story_name: string;
+  description: string;
+}
+
 
 export interface SuggestNFRDraftPayload {
   project_name: string;
@@ -194,10 +217,12 @@ async function parseOrThrow<T>(response: Response, fallback: string): Promise<T>
 
 export const projectApi = {
   createProject: async (data: ProjectCreate, token: string): Promise<ProjectResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 30000,
+      retries: 2,
     });
     return parseOrThrow(response, 'Gagal membuat proyek');
   },
@@ -222,9 +247,11 @@ export const projectApi = {
       url += `?workspace_id=${workspaceId}`;
     }
 
-    const response = await fetch(url, {
+    const response = await resilientFetch(url, {
       method: 'GET',
       headers: getAuthHeaders(token),
+      timeoutMs: 30000,
+      retries: 2,
     });
 
     if (!response.ok) {
@@ -236,26 +263,32 @@ export const projectApi = {
   },
 
   getProjectById: async (id: number, token: string): Promise<ProjectResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/${id}`, {
       method: 'GET',
       headers: getAuthHeaders(token),
+      timeoutMs: 30000,
+      retries: 2,
     });
     return parseOrThrow(response, 'Proyek tidak ditemukan');
   },
 
   updateProject: async (id: number, data: ProjectUpdate, token: string): Promise<ProjectResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 30000,
+      retries: 2,
     });
     return parseOrThrow(response, 'Gagal memperbarui proyek');
   },
 
   deleteProject: async (id: number, token: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(token),
+      timeoutMs: 30000,
+      retries: 2,
     });
     return parseOrThrow(response, 'Gagal menghapus proyek');
   },
@@ -264,10 +297,12 @@ export const projectApi = {
     data: SuggestDescriptionPayload,
     token: string
   ): Promise<SuggestDescriptionResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-description`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-description`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal memberikan saran deskripsi');
   },
@@ -276,10 +311,12 @@ export const projectApi = {
     data: SuggestUserGoalsPayload,
     token: string
   ): Promise<SuggestUserGoalsResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-user-goals`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-user-goals`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal memberikan saran goals & frustrations');
   },
@@ -288,34 +325,40 @@ export const projectApi = {
     data: SuggestUserTypeDescriptionPayload,
     token: string
   ): Promise<SuggestUserTypeDescriptionResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-user-type-description`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-user-type-description`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal memberikan saran deskripsi tipe pengguna');
   },
 
-    suggestUserTypeDraft: async (
+  suggestUserTypeDraft: async (
     data: SuggestUserTypeDraftPayload,
     token: string
   ): Promise<SuggestUserTypeDraftResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-user-type-draft`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-user-type-draft`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal membuat draf tipe pengguna');
   },
   
-    suggestEpicDraft: async (
+  suggestEpicDraft: async (
     data: SuggestEpicDraftPayload,
     token: string
   ): Promise<SuggestEpicDraftResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-epic-draft`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-epic-draft`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal membuat draf epic');
   },
@@ -324,22 +367,26 @@ export const projectApi = {
     data: SuggestEpicRefinePayload,
     token: string
   ): Promise<SuggestEpicRefineResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-epic-refine`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-epic-refine`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal menyempurnakan epic');
   },
 
-    suggestNFRDraft: async (
+  suggestNFRDraft: async (
     data: SuggestNFRDraftPayload,
     token: string
   ): Promise<SuggestNFRDraftResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-nfr-draft`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-nfr-draft`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal membuat draf NFR');
   },
@@ -348,39 +395,61 @@ export const projectApi = {
     data: SuggestNFRRefinePayload,
     token: string
   ): Promise<SuggestNFRRefineResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-nfr-refine`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-nfr-refine`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal menyempurnakan NFR');
+  },
+
+  suggestStoryDraft: async (
+    data: SuggestStoryDraftPayload,
+    token: string
+  ): Promise<SuggestStoryDraftResponse> => {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-story-draft`, {
+      method: 'POST',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify(data),
+      timeoutMs: 45000,
+      retries: 2,
+    });
+    return parseOrThrow(response, 'AI gagal membuat draf user story');
   },
 
   suggestUserJourney: async (
     data: SuggestUserJourneyPayload,
     token: string
   ): Promise<SuggestUserJourneyResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/suggest-user-journey`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/suggest-user-journey`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(data),
+      timeoutMs: 50000,
+      retries: 2,
     });
     return parseOrThrow(response, 'AI gagal memberikan saran user journey');
   },
 
   generateRequirements: async (id: number, token: string): Promise<GenerateRequirementsResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/projects/${id}/generate-requirements`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-  });
-  return parseOrThrow<GenerateRequirementsResponse>(response, 'AI gagal memproses data');
-},
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/${id}/generate-requirements`, {
+      method: 'POST',
+      headers: getAuthHeaders(token),
+      timeoutMs: 90000, // 90 detik khusus untuk proses AI komprehensif
+      retries: 2,
+    });
+    return parseOrThrow<GenerateRequirementsResponse>(response, 'AI gagal memproses data');
+  },
 
   saveRequirements: async (id: number, aiRequirementsData: any, token: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}/save-requirements`, {
+    const response = await resilientFetch(`${API_BASE_URL}/api/projects/${id}/save-requirements`, {
       method: 'POST',
       headers: getAuthHeaders(token),
       body: JSON.stringify(aiRequirementsData),
+      timeoutMs: 60000,
+      retries: 2,
     });
     return parseOrThrow(response, 'Gagal menyimpan draf kebutuhan');
   },
