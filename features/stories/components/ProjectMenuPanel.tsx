@@ -1,6 +1,7 @@
 // features/stories/components/ProjectMenuPanel.tsx
 import { ReactNode } from 'react';
-import { Plus, Settings, Folder, Trash2 } from 'lucide-react';
+import { Plus, Settings, Folder, Trash2, FileText } from 'lucide-react';
+import { projectApi } from '@/services/projectsApi';
 
 interface ExtraTopAction {
   label: string;
@@ -59,6 +60,21 @@ export default function ProjectMenuPanel({
         >
           <Settings className="w-4 h-4 text-gray-400" /> Project Settings
         </button>
+        {activeProjectId && (
+          <button
+            onClick={() => {
+              const token = localStorage.getItem('token');
+              const activeProj = projects.find((p) => String(p.id) === String(activeProjectId));
+              const projName = activeProj?.name || 'project';
+              if (token && activeProjectId) {
+                projectApi.downloadProjectPdf(Number(activeProjectId), projName, token).catch((e) => alert(e.message));
+              }
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer text-left"
+          >
+            <FileText className="w-4 h-4 text-rose-600" /> Export Project PDF
+          </button>
+        )}
       </div>
 
       <div className="px-3 py-1.5">

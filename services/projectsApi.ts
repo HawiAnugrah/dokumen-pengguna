@@ -384,4 +384,27 @@ export const projectApi = {
     });
     return parseOrThrow(response, 'Gagal menyimpan draf kebutuhan');
   },
+
+  downloadProjectPdf: async (projectId: number, projectName: string, token: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/export/pdf`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(formatApiError(errorData, 'Gagal mengunduh dokumen PDF'));
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = (projectName || 'project').replace(/[^a-zA-Z0-9_\-]/g, '_');
+    a.download = `${safeName}-spesifikasi.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

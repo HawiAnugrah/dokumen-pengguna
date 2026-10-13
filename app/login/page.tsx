@@ -37,6 +37,9 @@ export default function LoginPage() {
 
       // 1. Simpan token dan data user
       localStorage.setItem('token', data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
       localStorage.setItem('user', JSON.stringify(data.user));
       // 2. Cek apakah user sudah punya workspace & proyek di database
       try {

@@ -393,6 +393,29 @@ function StoriesPageContent() {
     input.click();
   };
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!projectId) {
+      alert("Pilih proyek terlebih dahulu.");
+      return;
+    }
+    const token = getAuthToken();
+    if (!token) {
+      alert("Sesi login berakhir. Silakan login kembali.");
+      return;
+    }
+
+    try {
+      setIsExportingPdf(true);
+      await projectApi.downloadProjectPdf(Number(projectId), projectName || 'project', token);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengunduh dokumen PDF');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleDownload = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(formattedEpics, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -568,6 +591,19 @@ function StoriesPageContent() {
                     title="Upload Document"
                   >
                     <Upload className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={isExportingPdf}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-rose-50 text-rose-700 bg-rose-50/50 rounded-lg transition-colors border border-rose-200 cursor-pointer text-xs font-semibold disabled:opacity-50"
+                    title="Download Dokumen Spesifikasi sebagai PDF"
+                  >
+                    {isExportingPdf ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5 text-rose-600" />
+                    )}
+                    <span>Unduh PDF</span>
                   </button>
                   <button
                     onClick={handleDownload}
